@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой жизненный прогресс</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --accent: #38bdf8;
+            --target-color: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .row-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--target-color);
+            letter-spacing: 1px;
+        }
+
+        .value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .goal-info {
+            font-size: 0.85rem;
+            color: var(--target-color);
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #334155;
+            padding-top: 10px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .highlight { border: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <h1>ПРОГРЕСС ЖИЗНИ</h1>
+
+    <div class="container" id="counters-container">
+        <!-- Карточки генерируются скриптом для точности расчетов -->
+    </div>
+
+    <script>
+        const startDate = new Date(Date.UTC(2007, 6, 9, 8, 45, 0));
+
+        const configs = [
+            { id: 'seconds', label: 'Секунды', step: 100000000 },
+            { id: 'minutes', label: 'Минуты', step: 10000000 },
+            { id: 'hours',   label: 'Часы',    step: 100000 },
+            { id: 'days',    label: 'Дни',     step: 1000 },
+            { id: 'weeks',   label: 'Недели',  step: 100 },
+            { id: 'months',  label: 'Месяцы',  step: 100 },
+            { id: 'years',   label: 'Лет',     step: 10 }
+        ];
+
+        // Создаем HTML структуру один раз
+        const container = document.getElementById('counters-container');
+        configs.forEach(conf => {
+            container.innerHTML += `
+                <div class="stat-card ${conf.id === 'seconds' ? 'highlight' : ''}">
+                    <div class="row-main">
+                        <div class="label">${conf.label}</div>
+                        <div id="${conf.id}-val" class="value">0</div>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="${conf.id}-progress" class="progress-fill"></div>
+                    </div>
+                    <div class="goal-info">
+                        <span id="${conf.id}-goal-text">цель - 0</span>
+                        <span id="${conf.id}-percent">0%</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        function update() {
+            const now = new Date();
+            const diff = now - startDate;
+
+            const stats = {
+                seconds: Math.floor(diff / 1000),
+                minutes: Math.floor(diff / (1000 * 60)),
+                hours:   Math.floor(diff / (1000 * 60 * 60)),
+                days:    Math.floor(diff / (1000 * 60 * 60 * 24)),
+                weeks:   Math.floor(diff / (1000 * 60 * 60 * 24 * 7)),
+                months:  Math.floor(diff / (1000 * 60 * 60 * 24 * 30.4375)),
+                years:   Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
+            };
+
+            configs.forEach(conf => {
+                const currentVal = stats[conf.id];
+                
+                // Вычисляем текущую цель (ближайшее число, кратное шагу)
+                // Если сейчас 600 млн, а шаг 100 млн, то цель станет 700 млн
+                let nextGoal = Math.ceil((currentVal + 1) / conf.step) * conf.step;
+                if (nextGoal === 0) nextGoal = conf.step;
+
+                // Процент до цели
+                const percent = ((currentVal / nextGoal) * 100).toFixed(1);
+
+                // Обновляем текст
+                document.getElementById(`${conf.id}-val`).textContent = currentVal.toLocaleString('ru-RU');
+                document.getElementById(`${conf.id}-goal-text`).textContent = `цель - ${nextGoal.toLocaleString('ru-RU')}`;
+                document.getElementById(`${conf.id}-percent`).textContent = `${percent}%`;
+                
+                // Обновляем полоску прогресса
+                document.getElementById(`${conf.id}-progress`).style.width = `${percent}%`;
+            });
+        }
+
+        setInterval(update, 1000);
+        update();
+    </script>
+</body>
+</html>
