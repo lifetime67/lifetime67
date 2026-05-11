@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой жизненный путь</title>
+    <style>
+        :root {
+            --bg-color: #020617;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --accent: #38bdf8;
+            --target-color: #94a3b8;
+            --date-color: #fbbf24;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .moscow-clock {
+            text-align: center;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 15px 30px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        .moscow-clock .time {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            display: block;
+        }
+
+        .moscow-clock .date {
+            font-size: 1rem;
+            color: var(--target-color);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .row-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--target-color);
+            font-weight: 600;
+        }
+
+        .value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .goal-info {
+            font-size: 0.85rem;
+            color: var(--target-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .eta-info {
+            font-size: 0.8rem;
+            color: var(--date-color);
+            text-align: right;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .highlight { border-left: 4px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="moscow-clock">
+        <span class="date" id="mow-date">Загрузка...</span>
+        <span class="time" id="mow-time">00:00:00</span>
+        <span class="label">Москва (UTC+3)</span>
+    </div>
+
+    <div class="container" id="counters-container">
+        <!-- Генерируется скриптом -->
+    </div>
+
+    <script>
+        // Константы времени
+        const MS_PER_SEC = 1000;
+        const MS_PER_MIN = MS_PER_SEC * 60;
+        const MS_PER_HOUR = MS_PER_MIN * 60;
+        const MS_PER_DAY = MS_PER_HOUR * 24;
+        const MS_PER_WEEK = MS_PER_DAY * 7;
+        const MS_PER_MONTH = MS_PER_DAY * 30.4375;
+        const MS_PER_YEAR = MS_PER_DAY * 365.25;
+
+        // Дата старта: 9 июля 2007, 11:45 МСК (UTC+3)
+        const startDate = new Date(Date.UTC(2007, 6, 9, 8, 45, 0));
+
+        const configs = [
+            { id: 'seconds', label: 'Секунды', step: 100000000, ms: MS_PER_SEC },
+            { id: 'minutes', label: 'Минуты',  step: 10000000,  ms: MS_PER_MIN },
+            { id: 'hours',   label: 'Часы',     step: 100000,    ms: MS_PER_HOUR },
+            { id: 'days',    label: 'Дни',      step: 1000,      ms: MS_PER_DAY },
+            { id: 'weeks',   label: 'Недели',   step: 100,       ms: MS_PER_WEEK },
+            { id: 'months',  label: 'Месяцы',   step: 100,       ms: MS_PER_MONTH },
+            { id: 'years',   label: 'Лет',      step: 10,        ms: MS_PER_YEAR }
+        ];
+
+        // Отрисовка структуры
+        const container = document.getElementById('counters-container');
+        configs.forEach(conf => {
+            container.innerHTML += `
+                <div class="stat-card ${conf.id === 'seconds' ? 'highlight' : ''}">
+                    <div class="row-main">
+                        <div class="label">${conf.label}</div>
+                        <div id="${conf.id}-val" class="value">0</div>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="${conf.id}-progress" class="progress-fill"></div>
+                    </div>
+                    <div class="goal-info">
+                        <span id="${conf.id}-goal-text">цель - 0</span>
+                        <span id="${conf.id}-percent">0%</span>
+                    </div>
+                    <div class="eta-info" id="${conf.id}-eta">Будет достигнуто: ...</div>
+                </div>
+            `;
+        });
+
+        function update() {
+            const now = new Date();
+            
+            // 1. Обновляем Московское время
+            const mowTimeStr = now.toLocaleTimeString('ru-RU', { timeZone: 'Europe/Moscow' });
+            const mowDateStr = now.toLocaleDateString('ru-RU', { 
+                timeZone: 'Europe/Moscow', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            document.getElementById('mow-time').textContent = mowTimeStr;
+            document.getElementById('mow-date').textContent = mowDateStr;
+
+            // 2. Обновляем счетчики
+            const diffMs = now - startDate;
+
+            configs.forEach(conf => {
+                const currentVal = Math.floor(diffMs / conf.ms);
+                
+                // Расчет цели
+                let nextGoal = Math.ceil((currentVal + 1) / conf.step) * conf.step;
+                if (nextGoal === 0) nextGoal = conf.step;
+
+                // Процент
+                const percent = Math.min(((currentVal / nextGoal) * 100), 100).toFixed(1);
+
+                // Расчет даты достижения (Дата начала + (цель * размер единицы))
+                const etaDate = new Date(startDate.getTime() + (nextGoal * conf.ms));
+                const etaStr = etaDate.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // Обновление DOM
+                document.getElementById(`${conf.id}-val`).textContent = currentVal.toLocaleString('ru-RU');
+                document.getElementById(`${conf.id}-goal-text`).textContent = `цель - ${nextGoal.toLocaleString('ru-RU')}`;
+                document.getElementById(`${conf.id}-percent`).textContent = `${percent}%`;
+                document.getElementById(`${conf.id}-progress`).style.width = `${percent}%`;
+                document.getElementById(`${conf.id}-eta`).textContent = `Достижение: ${etaStr}`;
+            });
+        }
+
+        setInterval(update, 1000);
+        update();
+    </script>
+</body>
+</html>
